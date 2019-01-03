@@ -138,20 +138,22 @@ class TXTButton: public Adafruit_GFX_Button{
 
 TXTButton btn_list[n];
   
-String pass = String(random(1000,9999 ));
+String pass= "2019";
 char str_array[4];
 int counter = 0;
-
+int failures = 0;
 
 void setup() {
   Serial.begin(9600);
   tft.begin();  // Begin ILI9341
   tft.setRotation(3);
   tft.fillScreen ( WHITE );
-  
-  keypad.addEventListener(keypadPressed);
-  createPanel();
+  Serial.println( pass );
 
+  keypad.addEventListener(keypadPressed);
+
+  createPanel();
+  GeneratePassword();
 }
 
 void loop() {
@@ -165,13 +167,13 @@ void keypadPressed(KeypadEvent key) {
     if( keypad.getState( ) == PRESSED ){
       
       if ( key  == pass[counter] ){
-        
-        //btn_list[ key - '0' ].draw(false);
-        btn_list[ key - '0' ].clear( tft, WHITE);
-        counter++;
-        Serial.print("Digit ");Serial.print(key);Serial.print(" in position ");Serial.print( counter );Serial.println( " is correct!!" );
-        
+        if( key - '0' >= 0 && key - '0' <= 9 ){
+          btn_list[ key - '0' ].draw(false);
+          counter++;
+          Serial.print("Digit ");Serial.print(key);Serial.print(" in position ");Serial.print( counter );Serial.println( " is correct!!" );
+        }
       }else{
+        failures++;
         counter = 0;
         Serial.print("Digit ");Serial.print(key);
         Serial.println(" Failed. Try again");
@@ -180,29 +182,31 @@ void keypadPressed(KeypadEvent key) {
       
       if (counter == pass.length() ){
         Serial.println("Pass Unlocked");
+        counter = 0;
         unlocked();
+        failures = 0;
+        GeneratePassword();
+        createPanel();
       }
       
     }
 
     if( keypad.getState( ) == RELEASED ){
-      btn_list[ key - '0' ].clear( tft, WHITE);
-      
+      //btn_list[ key - '0' ].clear( tft, WHITE);    
     }
 } 
 
-void createPanel(){
 
+void createPanel(){
+  randomSeed(analogRead(5));
   int w = tft.width() ;
   int h = tft.height() ;
   
-
   int l = h/6;
   int lx = w/(2*ncols);
   int ly = h/(2*nrows);
-
-  String str_options = "0123456789ABCD";
-
+  String strlist[n] = { "0","1","2","3","4","5","6","7","8","9","10","11"};
+  
   //Grid of numbers in list
    for(int i=0; i< n;i++){
     int my = (2*(i/ncols)+1);
@@ -210,17 +214,25 @@ void createPanel(){
     
     int row = my*ly;
     int col = mx*lx;
-    int n_option = random ( 0,str_options.length()-1 );
-    char opt = str_options[ n_option ];
     
-    str_options.remove(n_option, 1);
-
     btn_list[i].setXY(w/2-ncols*lx+col, h/2-nrows*ly+row);
-    btn_list[i].setStr( String(opt) );
+    btn_list[i].setStr( String(strlist[i]) );
     btn_list[i].setColor( BLACK, YELLOW, CYAN );
     btn_list[i].init(tft);
     btn_list[i].draw();
    }
+}
+
+void GeneratePassword(){
+  
+  String str_pass = "0123456789";
+  for(int i=0; i< 4;i++){
+    int n_option = random ( 0,str_pass.length()-1 );
+    pass[i] = str_pass[n_option];
+    str_pass.remove(n_option, 1);
+  }
+  Serial.println( pass );
+
 }
 
 void unlocked(){
@@ -230,17 +242,17 @@ void unlocked(){
   for (int i=0; i < nr; i++ ){
     tft.drawCircle (tft.width()/2, tft.height()/2, 200*i/nr, tft.color565( random(0,255), random(0,255), random(0,255) )  );
   }
-  
+  Serial.print( "Number of fails: " );Serial.println( failures );
   TXTButton unlock;
   unlock.setXY ( tft.width()/2, tft.height()/2 );
-  unlock.setStr( "UNLOCKED" );
+  unlock.setStr( "UNLOCK "+ String(failures) );
   unlock.setTextSize( 5 );
   unlock.setColor( tft.color565( random(0,255), random(0,255), random(0,255) ), YELLOW, tft.color565( random(0,255), random(0,255), random(0,255) ) );
   unlock.init( tft );
   unlock.draw();
   delay(10000);
   tft.fillScreen(WHITE);
-  createPanel();
+
 }
 
 
